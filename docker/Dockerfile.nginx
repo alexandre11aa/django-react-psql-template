@@ -1,0 +1,38 @@
+# Build do React
+FROM node:20-slim AS builder
+
+# Definindo diretório de trabalho
+WORKDIR /app
+
+# Copia apenas os arquivos de package para instalar dependências
+COPY client/package*.json ./
+
+# Limpa possíveis restos e instala dependências do Linux
+RUN npm install
+
+# Copia todo o restante do código
+COPY client/ ./
+
+# Gera o build do React
+RUN npm run build
+
+# Servir via Nginx
+FROM nginx:alpine
+
+# Copia o build do React
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copia a configuração personalizada do Nginx
+COPY nginx/http.conf.template /etc/nginx/conf.d/http.conf.template
+COPY nginx/https.conf.template /etc/nginx/conf.d/https.conf.template
+
+# Copiar script
+COPY nginx/scripts/start.sh /start.sh
+RUN chmod +x /start.sh
+
+# Expondo portas
+EXPOSE 80
+EXPOSE 443
+
+# Comando para iniciar o Nginx
+CMD ["/start.sh"]

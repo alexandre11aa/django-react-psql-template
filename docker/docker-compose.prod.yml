@@ -1,0 +1,52 @@
+services:
+  django:
+    container_name: system-api
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.api
+    environment:
+      - DJANGO_ENV=0  # Produção
+    expose:
+      - 8000
+    volumes:
+      - ../data/web/static:/data/web/static
+      - ../data/web/media:/data/web/media
+    env_file:
+      - ../api/dotenv_files/.env
+    depends_on:
+      - psql
+    networks:
+      - network
+
+  psql:
+    container_name: system-psql
+    image: postgres:13
+    volumes:
+      - ../data/postgres/data:/var/lib/postgresql/data
+    env_file:
+      - ../api/dotenv_files/.env
+    networks:
+      - network
+
+  react:
+    container_name: system-client
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.nginx
+    ports:
+      - 80:80
+      - 443:443
+    env_file:
+      - ../api/dotenv_files/.env
+    depends_on:
+      - django
+    volumes:
+      - ../data/web/static:/data/web/static
+      - ../data/web/media:/data/web/media
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    networks:
+      - network
+
+networks:
+  network:
+    driver: bridge

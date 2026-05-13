@@ -1,0 +1,92 @@
+# URL base da API
+@baseUrl=http://hubcetec.com/api/v1
+
+# Access Token (JWT) usado para autenticação nas requisições
+@token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU4NTQzNjU2LCJpYXQiOjE3NTg1NDMzNTYsImp0aSI6ImU5ODk5N2ZmZGQ1NTQzMGNiMjNlNDNjM2FkOTQ3OWRmIiwidXNlcl9pZCI6MX0.i6X-XxBwfY05Mpq2NgoQRkHo7qoeqv4WD1kY5dSWSPM
+
+
+####### START: token
+
+### POST: Obter Token de Acesso
+
+POST {{baseUrl}}/auth/login/
+Content-Type: application/json
+
+{
+  "email": "alexandre@ceteceng.com.br",
+  "password": "@Cetec123"
+}
+
+### POST: Recarregar Token de Acesso
+
+POST {{baseUrl}}/auth/refresh/
+Content-Type: application/json
+
+{
+  "refresh": "{Obtido no '/token', através do campo 'refresh'.}"
+}
+
+### POST: Verificar Validade de Token de Acesso
+
+POST {{baseUrl}}/auth/validate_cookie/
+Cookie: access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5ODgxNTA4LCJpYXQiOjE3Nzg1ODU1MDgsImp0aSI6IjkzNzVlYzQ1ZTRmMzRlNGNhNjRjODhjMmIyMTlkMzNlIiwidXNlcl9pZCI6MX0.wKSN-CrGgoIfa41lbFp2wYJJHSZElt0NxXSySekBj9A
+
+
+####### FINAL: token
+
+POST {{baseUrl}}/auth/refresh/
+Cookie: refresh_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc3OTkxNDQ4MCwiaWF0IjoxNzc4NTMyMDgwLCJqdGkiOiI1ZTkxYjhiZDQ2NTE0MGU1YjYxNGM3MWJlODNmMjE1NSIsInVzZXJfaWQiOjF9.pvIpS5Y-t07C3aZ32Z_GbI0gwwOhDNb4ThkeTYiNhKc
+
+####### START: custom_user
+
+### POST: Usuário - Criar
+
+POST {{baseUrl}}/users/custom_user/create/
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "email": "user_test_1@test.com",
+  "name": "user_test_1",
+  "access_level": "DEV",
+  "password": "test123"
+}
+
+### PUT/PATCH: Usuário - Editar
+
+PUT {{baseUrl}}/users/custom_user/update_by_id/2/
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "email": "user_test_1@test.com",
+  "name": "user_test_1_1",
+  "access_level": "DEV",
+  "password": "test123"
+}
+
+### DELETE: Usuário - Ativar/Desativar
+
+DELETE {{baseUrl}}/users/custom_user/delete_by_id/2/
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### GET: Usuário - Buscar por ID
+
+GET {{baseUrl}}/users/custom_user/get_by_id/2/
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### GET: Usuário - Buscar Todos
+
+GET {{baseUrl}}/users/custom_user/list_all/
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### GET: Usuário - Buscar por Campo
+
+GET {{baseUrl}}/users/custom_user/search/?is_active=true
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+####### FINAL: custom_user

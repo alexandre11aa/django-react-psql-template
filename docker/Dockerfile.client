@@ -1,0 +1,19 @@
+FROM node:20-slim
+
+# Definindo diretório de trabalho
+WORKDIR /app
+
+# Copia apenas os arquivos de package para instalar dependências
+COPY client/package*.json ./
+
+# Limpa possíveis restos e instala dependências do Linux
+RUN npm install
+
+# Copia todo o restante do código
+COPY client/ ./
+
+# Expondo a porta padrão do Vite
+EXPOSE 5173
+
+# Comando para iniciar o Vite
+CMD ["npm", "run", "dev", "--", "--host"]

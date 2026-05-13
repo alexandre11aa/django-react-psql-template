@@ -1,0 +1,13 @@
+/* src/styles/main.css */
+
+.main-section {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  min-height: 0;
+  animation: fadeIn 0.25s ease-in-out;
+  background: transparent;
+  border-radius: 0 0 20px 20px;
+  transition: box-shadow 0.3s ease;
+}

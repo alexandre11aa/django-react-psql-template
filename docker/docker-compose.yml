@@ -1,0 +1,49 @@
+services:
+  django:
+    container_name: system-api
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.api
+    environment:
+      - DJANGO_ENV=1  # Local
+    ports:
+      - 8000:8000
+    volumes:
+      - ../api/system:/api/system
+      - ../data/web/static:/data/web/static/
+      - ../data/web/media:/data/web/media/
+    env_file:
+      - ../api/dotenv_files/.env
+    depends_on:
+      - psql
+    networks:
+      - network
+
+  psql:
+    container_name: system-psql
+    image: postgres:13
+    volumes:
+      - ../data/postgres/data:/var/lib/postgresql/data/
+    env_file:
+      - ../api/dotenv_files/.env
+    networks:
+      - network
+
+  react:
+    container_name: system-client
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.client
+    ports:
+      - 5173:5173
+    volumes:
+      - ../client:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    networks:
+      - network
+
+networks:
+  network:
+    driver: bridge
