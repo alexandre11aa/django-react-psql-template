@@ -22,5 +22,9 @@ if [ "${DJANGO_ENV:-0}" = "1" ]; then
     python manage.py shell < /scripts/datas/user.py
 fi
 
+# Inicia o cron (agendamentos em /scripts/cron/crontab)
+# Se falhar, não deve impedir a API de subir
+cron.sh || echo "⚠️  Não foi possível iniciar o cron."
+
 # Inicia o servidor de desenvolvimento do Django
 runserver.sh

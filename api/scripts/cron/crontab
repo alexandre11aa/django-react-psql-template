@@ -1,0 +1,4 @@
+# Agendamentos do container da API. ~ Formato: minuto hora dia mês dia-da-semana comando
+
+# Limpeza de tokens de recuperação de senha: exclui os expirados, já usados ou invalidados
+0 0 * * * . /etc/container_environment.sh; cd /api/system && /venv/bin/python manage.py clean_password_recoveries >> /proc/1/fd/1 2>> /proc/1/fd/2

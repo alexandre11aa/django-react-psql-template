@@ -1,5 +1,35 @@
+from django.shortcuts import get_object_or_404
+
 from user.choices import ACCESS_LEVEL_CHOICES
 from user.models import CustomUser
+
+
+def customuser_get(*, pk):
+    """
+    Busca um Usuário ativo por ID.
+    """
+
+    return get_object_or_404(CustomUser, pk=pk)
+
+
+def customuser_get_any(*, pk):
+    """
+    Busca um Usuário por ID, ativo ou inativo (None se não existir).
+    """
+
+    return CustomUser.all_objects.filter(id=pk).first()
+
+
+def customuser_list_all(*, access_level, auths):
+    """
+    Lista todos os Usuários, ativos e inativos; perfis sem acesso administrativo
+    recebem apenas id e nome.
+    """
+
+    if access_level in auths:
+        return CustomUser.all_objects.all()
+
+    return CustomUser.all_objects.only("id", "name")
 
 
 def customuser_search(*, query_params):

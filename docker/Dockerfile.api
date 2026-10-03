@@ -4,6 +4,12 @@ FROM python:3.11
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# Timezone do container (agendamentos do cron e datas geradas pela aplicação)
+ENV TZ=America/Sao_Paulo
+
+# Evita que o apt-get pare o build esperando prompt interativo (ex: tzdata)
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Copia os arquivos necessários para o contêiner
 COPY api /api
 COPY api/scripts /scripts
@@ -11,11 +17,12 @@ COPY api/scripts /scripts
 # Define o diretório de trabalho
 WORKDIR /api/system
 
-# Instala dependências, permissões e dos2unix
+# Instala dependências, timezone, cron e dos2unix
 RUN apt-get update && \
-    apt-get install -y netcat-openbsd postgresql-client dos2unix && \
+    apt-get install -y netcat-openbsd postgresql-client dos2unix cron tzdata && \
+    ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime && echo "$TZ" > /etc/timezone && \
     rm -rf /var/lib/apt/lists/* && \
-    dos2unix /scripts/*.sh
+    find /scripts -type f -exec dos2unix {} +
 
 RUN python -m venv /venv && \
   /venv/bin/pip install --upgrade pip && \
@@ -26,6 +33,9 @@ RUN python -m venv /venv && \
   chmod -R 755 /data/web/media && \
   chmod -R +x /scripts
 
+
+# Instala os agendamentos definidos em /scripts/cron/crontab
+RUN crontab /scripts/cron/crontab
 
 ENV PATH="/scripts:/venv/bin:$PATH"
 

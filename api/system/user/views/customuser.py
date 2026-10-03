@@ -1,16 +1,11 @@
 import logging
 
-from django.db import transaction
-from django.shortcuts import get_object_or_404
-
 from rest_framework.views import APIView
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action, permission_classes
-
-from common.utils import send_email
 
 from common.views import DisableDefaultMethods, Pagination
 
@@ -20,7 +15,19 @@ from auth.views import CookieJWTAuthentication
 
 from user.models import CustomUser
 
-from user.selectors.customuser import customuser_search
+from user.selectors.customuser import (
+    customuser_get,
+    customuser_get_any,
+    customuser_list_all,
+    customuser_search,
+)
+
+from user.services.customuser import (
+    customuser_create,
+    customuser_send_welcome_email,
+    customuser_toggle_active,
+    customuser_update,
+)
 
 from user.serializers.customuser import (
     CustomUserSerializer,
@@ -95,53 +102,17 @@ class CustomUserViewSet(DisableDefaultMethods, viewsets.ModelViewSet):
         serializer = CustomUserCreateWithIDSerializer(data=request.data)
 
         if serializer.is_valid():
-            user = serializer.save()  # Cria o objeto
+            user = customuser_create(serializer=serializer)  # Cria o objeto
             password = serializer.validated_data.get("password")
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  # Retorna erros se inválido
         
         logger = logging.getLogger(__name__)
 
-        html = f"""
-        <p>Olá, {user.name}!</p>
-
-        <p>Seu acesso ao <b>Sistema</b> já está disponível. Seguem abaixo suas credenciais:</p><br>
-
-        <table role="presentation" cellspacing="0" cellpadding="0">
-        <tr>
-        <td style="background:#f4f4f4;padding:15px;border-radius:8px;width:320px;">
-        <b>Login:</b> <a href="mailto:{user.email}">{user.email}</a><br>
-        <b>Senha:</b> {password}
-        </td>
-
-        <td style="padding-left:20px; vertical-align: middle;">
-        <a href="http://127.0.0.1:5173/login" 
-        style="background:#2c7be5;color:white;padding:10px 18px;text-decoration:none;border-radius:6px; display:inline-block;"
-        >Acessar o Sistema</a>
-        </td>
-        </tr>
-        </table>
-
-        <br><p>Após o primeiro acesso, recomendamos alterar sua <b>senha</b> <a href="http://127.0.0.1:5173/profile_user">clicando aqui</a> para maior segurança!</p>
-
-        <p>Caso tenha qualquer dúvida ou precise de suporte, estamos à disposição.</p>
-
-        <p>
-        Atenciosamente,<br>
-        <b>Equipe de Desenvolvimento</b><br>
-        Sistema de Autenticação
-        </p>
-        """
-        
         try:
 
-            transaction.on_commit(lambda: send_email(
-                subject="Criação de Usuário do Sistema",
-                body=f"Olá {user.name}, Sua conta foi criada no Sistema!",
-                to_emails=[user.email],
-                html_body=html,
-            ))
-        
+            customuser_send_welcome_email(user=user, password=password)
+
             return Response({'id': user.id}, status=status.HTTP_201_CREATED)
         
         except Exception as e:
@@ -183,7 +154,7 @@ class CustomUserViewSet(DisableDefaultMethods, viewsets.ModelViewSet):
             return Response({"detail": " ".join(invalid_validations)}, status=400)
 
         # Busca o objeto pelo código ou ID
-        instance = get_object_or_404(CustomUser, pk=pk)
+        instance = customuser_get(pk=pk)
 
         serializer_class = CustomUserUpdateByIDSerializer
 
@@ -191,7 +162,7 @@ class CustomUserViewSet(DisableDefaultMethods, viewsets.ModelViewSet):
         serializer = serializer_class(
             instance, data=request.data, partial=request.method == 'PATCH', context=self.get_serializer_context())
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        customuser_update(serializer=serializer)
 
         return Response(serializer.data, status=status.HTTP_200_OK if instance else status.HTTP_201_CREATED)
     
@@ -218,12 +189,9 @@ class CustomUserViewSet(DisableDefaultMethods, viewsets.ModelViewSet):
             return Response({"detail": " ".join(invalid_validations)}, status=400)
 
         # Busca o objeto por ID
-        user = CustomUser.all_objects.filter(id=pk).first()  # instance = get_object_or_404(CustomUser, pk=pk)
+        user = customuser_get_any(pk=pk)
 
-        if user.is_active == True:
-            user.soft_delete()
-        else:
-            user.recover()
+        customuser_toggle_active(instance=user)
 
         return Response(status=status.HTTP_204_NO_CONTENT)  # Retorna resposta de sucesso
         
@@ -250,7 +218,7 @@ class CustomUserViewSet(DisableDefaultMethods, viewsets.ModelViewSet):
             return Response({"detail": " ".join(invalid_validations)}, status=400)
 
         # Busca o objeto por ID ou código
-        instance = get_object_or_404(CustomUser, pk=pk)
+        instance = customuser_get(pk=pk)
         serializer = self.get_serializer(instance)
 
         return Response(serializer.data)  # Retorna os dados do objeto encontrado
@@ -267,10 +235,7 @@ class CustomUserViewSet(DisableDefaultMethods, viewsets.ModelViewSet):
                 -H "Accept: application/json"
         '''
         
-        if request.user.access_level in self.auths:
-            queryset = CustomUser.all_objects.all()
-        else:
-            queryset = CustomUser.all_objects.only("id", "name")
+        queryset = customuser_list_all(access_level=request.user.access_level, auths=self.auths)
 
         serializer = self.get_serializer(queryset, many=True)
 
