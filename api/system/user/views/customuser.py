@@ -12,13 +12,15 @@ from rest_framework.decorators import action, permission_classes
 
 from common.utils import send_email
 
-from common.views import DisableDefaultMethods
+from common.views import DisableDefaultMethods, Pagination
 
 from common.validations import auth_access_level
 
 from auth.views import CookieJWTAuthentication
 
 from user.models import CustomUser
+
+from user.selectors.customuser import customuser_search
 
 from user.serializers.customuser import (
     CustomUserSerializer,
@@ -281,7 +283,7 @@ class CustomUserViewSet(DisableDefaultMethods, viewsets.ModelViewSet):
         Ação personalizada para buscar objetos com parâmetros específicos
 
         Example:
-            curl -X GET "http://127.0.0.1:8000/api/v1/users/custom_user/search/?is_active=True&name=João" \
+            curl -X GET "http://127.0.0.1:8000/api/v1/users/custom_user/search/?search_field=name&search_value=João&is_active=true&page=1" \
                 -b "access_token={TOKEN_DE_ACESSO}" \
                 -H "Accept: application/json"
         '''
@@ -296,22 +298,12 @@ class CustomUserViewSet(DisableDefaultMethods, viewsets.ModelViewSet):
         if invalid_validations:
             return Response({"detail": " ".join(invalid_validations)}, status=400)
 
-        query_params = request.query_params
-        queryset = CustomUser.all_objects.all()
+        queryset = customuser_search(query_params=request.query_params)
 
-        # Aplica filtros baseados nos parâmetros da consulta
-        for param, value in query_params.items():
-            if param in [f.name for f in CustomUser._meta.get_fields()]:
-                if param == 'is_active':
-                    # Filtro para verificar se o objeto está ativo ou inativo
-                    if value in ['true', 'True', True]:
-                        queryset = queryset.filter(**{f"{param}": True})
-                    else:
-                        queryset = queryset.filter(**{f"{param}": False})
-                else:
-                    # Filtro para outros campos como nome ou email
-                    queryset = queryset.filter(**{f"{param}__icontains": value})
+        paginator = Pagination()
 
-        # Serializa a lista de objetos encontrados
-        serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+        page = paginator.paginate_queryset(queryset, request, view=self)
+
+        serializer = self.get_serializer(page, many=True)
+
+        return paginator.get_paginated_response(serializer.data)

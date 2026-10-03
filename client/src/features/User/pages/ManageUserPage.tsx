@@ -4,14 +4,16 @@ import React, { useState, useEffect } from "react";
 import notify from "../../../services/notificationService";
 import DefaultPageLayout from "../../../components/DefaultPageLayout";
 import Pagination from "../../../components/Pagination";
-import { usePagination } from "../../../hooks/usePagination";
 import ModalRegisterEditUser from "../components/ModalRegisterEditUser";
 import ModalStatus from "../../../components/ModalStatus";
 import type { User } from "../types/userType";
 import userService from "../services/userService";
 
+const PAGE_SIZE = 10;
+
 export const ManageUserPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [inputValue, setInputValue] = useState("");
   const [filterField, setFilterField] =
     useState<"name" | "email" | "access_level">("name");
 
@@ -20,17 +22,24 @@ export const ManageUserPage: React.FC = () => {
   const [modalStatusOpen, setModalStatusOpen] = useState(false);
 
   const [users, setUsers] = useState<User[]>([]);
-  const [activeFilter, setFilter] = useState("ativos");
+  const [activeFilter, setFilter] = useState<"todos" | "ativos" | "inativos">("ativos");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (page: number) => {
     try {
       setLoading(true);
-      const data = await userService.listAll();
-      const sortedData = data.sort((a, b) =>
-        a.name.localeCompare(b.name, "pt-BR")
-      );
-      setUsers(sortedData);
+
+      const data = await userService.search(page, PAGE_SIZE, {
+        searchField: filterField,
+        searchValue: searchTerm,
+        isActive: activeFilter === "todos" ? undefined : activeFilter === "ativos",
+      });
+
+      setTotalPages(Math.max(1, Math.ceil(data.count / PAGE_SIZE)));
+      setUsers(data.results);
+      setCurrentPage(page);
     } catch (error: any) {
       notify.error("Erro ao carregar usuários!", error);
     } finally {
@@ -39,25 +48,14 @@ export const ManageUserPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    fetchUsers(1);
+  }, [searchTerm, filterField, activeFilter]);
 
-  const filteredUsers = users.filter((user) => {
-    const value = user[filterField]?.toString().toLowerCase() || "";
-    const matchesSearch = value.includes(searchTerm.toLowerCase());
-
-    const matchesActive =
-      activeFilter === "todos"
-        ? true
-        : activeFilter === "ativos"
-        ? user.is_active
-        : !user.is_active;
-
-    return matchesSearch && matchesActive;
-  });
-
-  const { currentPage, totalPages, paginatedItems, handlePageChange } =
-    usePagination<User>(filteredUsers, 10);
+  const handlePageChange = (page: number) => {
+    if (page < 1) return;
+    if (page > totalPages) return;
+    fetchUsers(page);
+  };
 
   return (
     <DefaultPageLayout>
@@ -65,14 +63,14 @@ export const ManageUserPage: React.FC = () => {
         isOpen={modalRegisterOpen}
         onClose={() => setModalRegisterOpen(false)}
         userToEdit={editingUser}
-        refreshUsers={fetchUsers}
+        refreshUsers={() => fetchUsers(currentPage)}
       />
 
       <ModalStatus
         isOpen={modalStatusOpen}
         onClose={() => setModalStatusOpen(false)}
         toEdit={editingUser}
-        refresh={fetchUsers}
+        refresh={() => fetchUsers(currentPage)}
         service={userService}
       />
 
@@ -111,12 +109,23 @@ export const ManageUserPage: React.FC = () => {
 
         <div className="col-md-4">
           <label className="form-label fw-semibold">Pesquisar</label>
-          <input
-            className="form-control rounded-0"
-            placeholder="Digite para buscar..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <div className="input-group">
+            <input
+              className="form-control rounded-0"
+              placeholder="Digite para buscar..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onBlur={() => setSearchTerm(inputValue)}
+              onKeyDown={(e) => { if (e.key === "Enter") setSearchTerm(inputValue); }}
+            />
+            <button
+              type="button"
+              className="btn btn-dark rounded-0"
+              onClick={() => setSearchTerm(inputValue)}
+            >
+              Ir
+            </button>
+          </div>
         </div>
 
         <div className="col-md-4">
@@ -179,8 +188,8 @@ export const ManageUserPage: React.FC = () => {
                   <div className="spinner-border" />
                 </td>
               </tr>
-            ) : paginatedItems.length > 0 ? (
-              paginatedItems.map((user) => (
+            ) : users.length > 0 ? (
+              users.map((user) => (
                 <tr key={user.id}>
                   <td>{user.email}</td>
                   <td>{user.name}</td>

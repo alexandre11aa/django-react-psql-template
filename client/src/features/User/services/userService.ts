@@ -1,14 +1,36 @@
 // src/features/User/services/userService.ts
 
 import api from "../../../services/api";
-import type { User } from '../types/userType';
+import type { User, UserSearchParams, PaginatedUserResponse } from '../types/userType';
 
-const listAll = async (): Promise<User[]> => {
+const search = async (
+  page: number,
+  pageSize: number,
+  params: UserSearchParams = {}
+): Promise<PaginatedUserResponse> => {
   try {
-    const response = await api.get<User[]>('users/custom_user/list_all/');
+    const searchParams = new URLSearchParams();
+
+    // Parâmetros de paginação
+    searchParams.append('page', String(page));
+    searchParams.append('page_size', String(pageSize));
+
+    // Parâmetro de status
+    if (params.isActive !== undefined) searchParams.append('is_active', String(params.isActive));
+
+    // Parâmetros de busca textual
+    if (params.searchField && params.searchValue) {
+      searchParams.append('search_field', params.searchField);
+      searchParams.append('search_value', params.searchValue);
+    }
+
+    const response = await api.get<PaginatedUserResponse>('users/custom_user/search/', {
+      params: searchParams,
+    });
+
     return response.data;
   } catch (error: any) {
-    console.error('Erro ao buscar usuários!', error);
+    console.error('Erro ao buscar usuários paginados!', error);
     throw error;
   }
 };
@@ -67,7 +89,7 @@ const toggleStatus = async (userId: number) => {
 };
 
 export default {
-  listAll,
+  search,
   get,
   create,
   update,
