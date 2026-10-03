@@ -4,7 +4,7 @@ from django.db import models
 from django.db.models import Q
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 
-from core.common.models import BaseModel, UserManager
+from common.models import BaseModel, UserManager
 
 from user.choices import ACCESS_LEVEL_CHOICES
 

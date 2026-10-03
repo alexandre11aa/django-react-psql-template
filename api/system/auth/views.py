@@ -24,7 +24,7 @@ from user.models import (
     PasswordRecovery
 )
 
-from core.common.utils import (
+from common.utils import (
     send_email,
     generate_token
 )

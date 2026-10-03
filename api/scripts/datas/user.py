@@ -31,6 +31,7 @@ def create_superuser_if_not_exists(name, email, password):
             name=name,
             email=email,
             password=password,
+            access_level='ADM',
         )
         user.save()
 

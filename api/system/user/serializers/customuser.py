@@ -4,10 +4,10 @@ from user.models import CustomUser
 from user.choices import USER_FIELDS
 
 
-# Serializer base para CustomUser
+# Serializer base
 class CustomUserSerializer(serializers.ModelSerializer):
     """
-    Serializer principal para manipulação geral dos campos do modelo CustomUser.
+    Serializer principal para manipulação geral dos campos do modelo.
     """
 
     class Meta:
@@ -20,10 +20,10 @@ class CustomUserSerializer(serializers.ModelSerializer):
         return value
 
 
-# Serializer para criação de CustomUser utilizando o ID
+# Serializer para criação
 class CustomUserCreateWithIDSerializer(serializers.ModelSerializer):
     """
-    Serializer para criação de CustomUser utilizando o ID.
+    Serializer para criação.
     """
     
     class Meta:
@@ -40,10 +40,10 @@ class CustomUserCreateWithIDSerializer(serializers.ModelSerializer):
         return user
 
 
-# Serializer para atualização de CustomUser usando o ID
+# Serializer para atualização
 class CustomUserUpdateByIDSerializer(serializers.ModelSerializer):
     """
-    Serializer para atualização de CustomUser utilizando o ID.
+    Serializer para atualização.
     """
     
     class Meta:

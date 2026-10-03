@@ -10,11 +10,11 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action, permission_classes
 
-from core.common.utils import send_email
+from common.utils import send_email
 
-from core.common.views import DisableDefaultMethods
+from common.views import DisableDefaultMethods
 
-from core.common.validations import auth_access_level
+from common.validations import auth_access_level
 
 from auth.views import CookieJWTAuthentication
 
@@ -43,10 +43,10 @@ class CustomUserViewSet(DisableDefaultMethods, viewsets.ModelViewSet):
         Método que seleciona o serializer correto dependendo da ação
         '''
 
-        # Ação de criação usando código ID
+        # Ação de criação
         if self.action == 'create':
             return CustomUserCreateWithIDSerializer
-        # Ações de atualização usando ID
+        # Ações de atualização
         if self.action == 'update_by_id':
             return CustomUserUpdateByIDSerializer
         # Ação padrão para outros casos
@@ -67,7 +67,7 @@ class CustomUserViewSet(DisableDefaultMethods, viewsets.ModelViewSet):
     @permission_classes([IsAuthenticated])
     def create_(self, request):
         '''
-        Ação personalizada para criar um CustomUser
+        Ação personalizada para criar
 
         Example:
             curl -X POST http://127.0.0.1:8000/api/v1/users/custom_user/create/ \
@@ -89,7 +89,7 @@ class CustomUserViewSet(DisableDefaultMethods, viewsets.ModelViewSet):
         if invalid_validations:
             return Response({"detail": " ".join(invalid_validations)}, status=400)
 
-        # Instancia o serializer para criação de objeto com código ID
+        # Instancia o serializer para criação de objeto
         serializer = CustomUserCreateWithIDSerializer(data=request.data)
 
         if serializer.is_valid():
@@ -158,7 +158,7 @@ class CustomUserViewSet(DisableDefaultMethods, viewsets.ModelViewSet):
     @permission_classes([IsAuthenticated])
     def update_by_id(self, request, pk=None):
         '''
-        Ação personalizada para atualizar CustomUser por ID
+        Ação personalizada para atualizar
 
         Example:
             curl -X PUT http://127.0.0.1:8000/api/v1/users/custom_user/update_by_id/1/ \
