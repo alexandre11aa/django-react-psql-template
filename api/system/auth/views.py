@@ -29,12 +29,31 @@ from common.utils import (
     generate_token
 )
 
+from common.concurrency import limit_concurrency
+
+from auth.throttles import (
+    LoginEmailThrottle,
+    LoginGlobalUsersThrottle,
+    LogoutIPThrottle,
+    PasswordResetGlobalIPThrottle,
+    PasswordResetIPThrottle,
+    PasswordResetRequestEmailThrottle,
+    PasswordResetRequestGlobalThrottle,
+    RateLimited,
+    RefreshIPThrottle,
+)
+
 from auth.serializers import (
     LoginSerializer, 
     CustomTokenObtainPairSerializer,
     EmailSerializer,
     ResetPasswordSerializer,
 )
+
+
+# Limite de concorrência compartilhado por todos os endpoints públicos:
+# o servidor processa no máximo 80 requisições públicas ao mesmo tempo e as demais aguardam vaga
+public_concurrency_limit = limit_concurrency(max_concurrent=80, timeout=30)
 
 
 class CookieJWTAuthentication(JWTAuthentication):
@@ -55,8 +74,15 @@ class CookieJWTAuthentication(JWTAuthentication):
 
 class AuthViewSet(viewsets.ViewSet):
 
+    def throttled(self, request, wait):
+        raise RateLimited(wait=int(wait) + 1 if wait else 60)
+
     @swagger_auto_schema(request_body=LoginSerializer, responses={200: 'Success'})
-    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    @action(
+        detail=False, methods=['post'], permission_classes=[AllowAny],
+        throttle_classes=[LoginGlobalUsersThrottle, LoginEmailThrottle],
+    )
+    @public_concurrency_limit
     def login(self, request):
 
         login_serializer = LoginSerializer(data=request.data)
@@ -102,14 +128,22 @@ class AuthViewSet(viewsets.ViewSet):
 
         return response
     
-    @action(detail=False, methods=['post'], authentication_classes=[], permission_classes=[AllowAny])
+    @action(
+        detail=False, methods=['post'], authentication_classes=[], permission_classes=[AllowAny],
+        throttle_classes=[LogoutIPThrottle],
+    )
+    @public_concurrency_limit
     def logout(self, request):
         response = Response({"detail": "Logout realizado com sucesso."}, status=status.HTTP_200_OK)
         response.delete_cookie('access_token')
         response.delete_cookie('refresh_token')
         return response
 
-    @action(detail=False, methods=['post'], authentication_classes=[CookieJWTAuthentication], permission_classes=[AllowAny])
+    @action(
+        detail=False, methods=['post'], authentication_classes=[CookieJWTAuthentication], permission_classes=[AllowAny],
+        throttle_classes=[RefreshIPThrottle],
+    )
+    @public_concurrency_limit
     def refresh(self, request):
         refresh_token = request.COOKIES.get('refresh_token')
         
@@ -142,7 +176,11 @@ class AuthViewSet(viewsets.ViewSet):
         return Response({"detail": "Token válido."}, status=status.HTTP_200_OK)
     
     @swagger_auto_schema(request_body=EmailSerializer, responses={200: 'Success'})
-    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    @action(
+        detail=False, methods=['post'], permission_classes=[AllowAny],
+        throttle_classes=[PasswordResetRequestGlobalThrottle, PasswordResetRequestEmailThrottle],
+    )
+    @public_concurrency_limit
     def request_password_reset(self, request):
         serializer = EmailSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -209,7 +247,11 @@ class AuthViewSet(viewsets.ViewSet):
             return Response({"detail": "Erro interno ao processar solicitação."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @swagger_auto_schema(request_body=ResetPasswordSerializer, responses={200: 'Success'})
-    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    @action(
+        detail=False, methods=['post'], permission_classes=[AllowAny],
+        throttle_classes=[PasswordResetGlobalIPThrottle, PasswordResetIPThrottle],
+    )
+    @public_concurrency_limit
     def password_reset(self, request):
         serializer = ResetPasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
