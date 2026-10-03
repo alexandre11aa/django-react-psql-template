@@ -2,6 +2,30 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import BaseUserManager
 
+from simple_history.models import HistoricalRecords
+
+
+# Campos que NÃO entram no histórico (django-simple-history): sensíveis (senhas, tokens).
+# A exclusão é por nome e vale para todos os models; nomes que um model não tem são ignorados.
+HISTORY_EXCLUDED_FIELDS = [
+    'password',     # user.CustomUser (hash)
+    'token_hash',   # user.PasswordRecovery
+]
+
+
+class OptInHistoricalRecords(HistoricalRecords):
+    """
+    HistoricalRecords por adesão: apesar de declarado no BaseModel (inherit=True), só os models que
+    definem `track_history = True` ganham histórico (e a tabela Historical<Model>). Os demais não
+    geram tabela, migration nem registros.
+    """
+
+    def finalize(self, sender, **kwargs):
+        if self.cls is not sender and not getattr(sender, 'track_history', False):
+            return
+
+        super().finalize(sender, **kwargs)
+
 
 class BaseModelQuerySet(models.QuerySet):
     def delete(self):
@@ -18,6 +42,11 @@ class BaseModel(models.Model):
     updated_at = models.DateTimeField('Updated At', auto_now=True)
     deleted_at = models.DateTimeField('Deleted At', null=True, blank=True)
     is_active = models.BooleanField('Is Active', default=True)
+
+    # Histórico de criação/alteração/inativação, com o usuário responsável (preenchido por
+    # common.middleware.HistoryUserMiddleware). É por adesão: para registrar um model,
+    # defina `track_history = True` nele (ver OptInHistoricalRecords).
+    history = OptInHistoricalRecords(inherit=True, excluded_fields=HISTORY_EXCLUDED_FIELDS)
 
     objects = BaseManager()
     all_objects = models.Manager()

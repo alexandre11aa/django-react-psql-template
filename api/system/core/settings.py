@@ -61,6 +61,7 @@ INSTALLED_APPS = [
     'drf_yasg',                     # API
     'rest_framework',               # API
     'corsheaders',                  # API
+    'simple_history',               # TOOL
     'user',                         # APP
 ]
 
@@ -77,6 +78,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'common.middleware.HistoryUserMiddleware',  # Registra o usuário (JWT em cookie) no histórico
 ]
 
 ROOT_URLCONF = 'core.urls'

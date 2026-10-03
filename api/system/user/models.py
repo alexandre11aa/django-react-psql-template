@@ -38,6 +38,9 @@ class CustomUser(AbstractBaseUser, PermissionsMixin, BaseModel):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['name']
 
+    # Histórico (django-simple-history) ativo neste model.
+    track_history = True
+
     objects = UserManager()
 
     def __str__(self):
