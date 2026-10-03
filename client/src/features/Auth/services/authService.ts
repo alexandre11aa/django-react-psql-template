@@ -1,6 +1,6 @@
 // src/features/Auth/services/loginService.ts
 
-import api from "../../../services/api";
+import api, { setLoggingOut } from "../../../services/api";
 import type { LoginResponse, TokenResponse } from '../types/loginType';
 import { navigateTo } from '../../../utils/navigate';
 
@@ -8,6 +8,7 @@ import { navigateTo } from '../../../utils/navigate';
 const login = async (email: string, password: string): Promise<LoginResponse> => {
   try {
     const response = await api.post<LoginResponse>('/auth/login/', { email, password });
+    setLoggingOut(false);
     console.log('Login realizado.');
     return response.data;
 
@@ -30,6 +31,7 @@ const token = async (email: string, password: string): Promise<TokenResponse> =>
 };
 
 const logout = async () => {
+  setLoggingOut(true);
   try {
     await api.post('/auth/logout/', {});
     console.log('Logout realizado.');

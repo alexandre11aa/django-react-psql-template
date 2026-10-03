@@ -15,6 +15,14 @@ if (import.meta.env.MODE == "production") {
 
 const API_URL = VITE_SYSTEM_API_URL;
 
+// Evita que o interceptor renove o access_token via refresh_token
+// enquanto um logout está em andamento (corrida entre delete_cookie e refresh).
+let isLoggingOut = false;
+
+export function setLoggingOut(value: boolean) {
+  isLoggingOut = value;
+}
+
 export function getCookie(name: string): string | null {
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
@@ -35,7 +43,7 @@ const api = axios.create({
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config;
+    const originalRequest = error.config as (AxiosError['config'] & { _retry?: boolean }) | undefined;
 
     if (!originalRequest || !originalRequest.url) {
       return Promise.reject(error);
@@ -50,7 +58,15 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    if (error.response?.status === 401) {
+    // Só tenta renovar 1x por requisição original — sem essa guarda, um 401 que persiste
+    // após o refresh faz o interceptor renovar e reenviar pra sempre, em loop
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      if (isLoggingOut) {
+        return Promise.reject(error);
+      }
+
       try {
         await api.post('auth/refresh/', {}, { withCredentials: true });
         return api.request(originalRequest);

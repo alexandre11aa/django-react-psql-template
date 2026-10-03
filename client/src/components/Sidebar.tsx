@@ -23,12 +23,12 @@ export function Sidebar() {
     ? JSON.parse(user).userAccessLevel
     : "";
 
-  const handleLogout = () => {
-    localStorage.clear();
-
+  const handleLogout = async () => {
     try {
-      authService.logout();
+      await authService.logout();
     } catch {}
+
+    localStorage.clear();
 
     notify.success("Você saiu do Sistema, até logo!");
 

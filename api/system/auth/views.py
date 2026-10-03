@@ -102,7 +102,7 @@ class AuthViewSet(viewsets.ViewSet):
 
         return response
     
-    @action(detail=False, methods=['post'], authentication_classes=[CookieJWTAuthentication], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['post'], authentication_classes=[], permission_classes=[AllowAny])
     def logout(self, request):
         response = Response({"detail": "Logout realizado com sucesso."}, status=status.HTTP_200_OK)
         response.delete_cookie('access_token')
@@ -116,22 +116,26 @@ class AuthViewSet(viewsets.ViewSet):
         if not refresh_token:
             return Response({"detail": "Refresh token não encontrado."}, status=status.HTTP_401_UNAUTHORIZED)
 
-        serializer = TokenRefreshSerializer(data={'refresh': refresh_token})
-        serializer.is_valid(raise_exception=True)
-        access = serializer.validated_data['access']
+        try:
+            serializer = TokenRefreshSerializer(data={'refresh': refresh_token})
+            serializer.is_valid(raise_exception=True)
+            access = serializer.validated_data['access']
 
-        response = Response({"detail": "Token renovado."}, status=status.HTTP_200_OK)
-        
-        response.set_cookie(
-            key='access_token',
-            value=access,
-            httponly=True,
-            secure=(os.getenv('SECURY_COOKIES', 'False') in ['true', 'True']),
-            samesite='Lax',
-            max_age=60*5  # 5 minutos
-        )
+            response = Response({"detail": "Token renovado."}, status=status.HTTP_200_OK)
 
-        return response
+            response.set_cookie(
+                key='access_token',
+                value=access,
+                httponly=True,
+                secure=(os.getenv('SECURY_COOKIES', 'False') in ['true', 'True']),
+                samesite='Lax',
+                max_age=60*5  # 5 minutos
+            )
+
+            return response
+
+        except Exception:
+            return Response({"detail": "Refresh token inválido ou expirado."}, status=status.HTTP_401_UNAUTHORIZED)
     
     @action(detail=False, methods=['get'], authentication_classes=[CookieJWTAuthentication], permission_classes=[IsAuthenticated])
     def validate_cookie(self, request):
